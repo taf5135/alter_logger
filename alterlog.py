@@ -181,6 +181,51 @@ Available commands:
         output: Silently terminates the program
 """
 
+HELP_MSGS = {
+    "login": 
+        """log in to a profile
+        input: login [profilename] [password]
+        output: Welcome message if the password is correct, error message otherwise otherwise."""
+    ,"logout": 
+        """log out of the current profile
+        input: logout
+        output: No output. Silently logs the profile out."""
+    ,"view": 
+        """view a single message in detail
+        input: view [msgnum]
+        output:"""
+    ,"viewall": 
+        """view all messages the current profile has available, sorted by most recent
+        input: viewall [Y/N see already viewed messages]
+        output: a table of messages"""
+    ,"viewmine": 
+        """view a list of all messages the current profile has sent
+        input: viewmine
+        output: a table of messages"""
+    ,"msg":
+        """write a message to be delivered to other profiles
+        input: msg [space-separated list of profiles to send to]
+        output: Prompts for a subject, then a body. Afterwards sends the message"""
+    ,"delete":
+        """delete a message that the current profile has written, and remove it everywhere
+        input: delete [msgnum]
+        output: no output, message is deleted silently"""
+    ,"reset":
+        """resets the entire application back to its install state
+        NOTE: testing purposes only! 
+        input: reset
+        output: deletes all profiles and messages, removes the root password, and closes the program"""
+    ,"create_profile":
+        """generates a new profile with an optional password
+        input: create_profile [username] [password]
+        output: Silently creates a profile with the username/password combination"""
+    ,"help":
+        """input: help
+        output: displays this help message"""
+    ,"exit":
+        """input: exit
+        output: Silently terminates the program"""
+}
 
 
 
@@ -203,8 +248,11 @@ class CLIController:
             if tab is None:
                 print(f"Profile with name {profile_name} does not exist")
             else:
-                profile_id, stored_hash, stored_salt = tab["id"], tab["pwd_hash"], tab["pwd_salt"] #TODO broken, does not work
-                if stored_hash == 0 and stored_salt == 0: #no password on the account
+                profile_id, stored_hash, stored_salt = tab["id"], tab["pwd_hash"], tab["pwd_salt"] 
+                if profile_id == 0:
+                    print("Cannot log in as root as profile")
+
+                elif stored_hash == 0 and stored_salt == 0: #no password on the account
                     self.profile = profile_id
                 else:
                     given_hash = get_hash(password, stored_salt)
