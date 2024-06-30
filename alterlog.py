@@ -329,13 +329,19 @@ class CLIController:
         return True
 
     def msg(self, recipients : list):
+
+        cur = self.conn.cursor()
         #params should be a list of profiles
+        if len(recipients) == 0:
+            res = cur.execute("SELECT DISTINCT name FROM Profiles WHERE id != 0 AND id != ?", [self.profile])
+            recipients = [r['name'] for r in res.fetchall()] #SELECT DISTINCT id FROM Profiles WHERE id != 0
+
         send_to_all = len(recipients) == 0
         subj = input("Input subject: ")
         body = input("Input body: ")
 
         
-        cur = self.conn.cursor()
+        
         cur.execute("INSERT INTO Messages (author_id, subject, body, published_date, available_to_everyone) VALUES (?, ?, ?, ?, ?);",
                     [self.profile, subj, body, datetime.now().isoformat(), send_to_all])
         
@@ -346,8 +352,8 @@ class CLIController:
             #currently has to be dynamic because of how sqlite works
             #NOT SECURE! Change this when you move to a non-prototype version
             sql_statement = f"""
-                INSERT INTO Profile_Message_Link (profile_id, message_id) 
-                SELECT id, ? FROM profiles WHERE name IN ({"'"+"','".join(recipients)+"'"})
+                INSERT INTO Profile_Message_Link (profile_id, message_id, already_viewed) 
+                SELECT id, ?, FALSE FROM profiles WHERE name IN ({"'"+"','".join(recipients)+"'"})
                 ;"""
             cur.execute(sql_statement, [message_id])
 
@@ -407,6 +413,10 @@ class CLIController:
 
     def translate_input(self, instr : str): #returns whether execution should continue after this
         in_arr = instr.lower().split() #TODO not pythonic, probably a better way of doing this. ALSO WE NEED TO DO BOUNDS CHECKING, WHAT IF THERE ARE <1 SPACES?!
+
+        if len(in_arr) == 0:
+            return True
+
         opcode = in_arr[0]
         params = []
         if len(in_arr) > 1:
