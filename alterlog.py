@@ -120,7 +120,6 @@ CREATE_MESSAGES_TABLE_QRY = """
         ,subject                TEXT
         ,body                   TEXT
         ,published_date         DATETIME
-        ,available_to_everyone  BOOLEAN
         ,FOREIGN KEY(author_id) REFERENCES Profiles(id) ON DELETE CASCADE
     );
 """
@@ -272,16 +271,15 @@ class CLIController:
 
     def view(self, msg_viewnum): #TODO not secure, anyone who knows the id of a message can view it regardless of whether it was sent to them.
         cur = self.conn.cursor()
-        res = cur.execute("SELECT name, subject, body, available_to_everyone FROM Messages m INNER JOIN Profiles p ON p.id = m.author_id WHERE m.id = ?", [msg_viewnum])
+        res = cur.execute("SELECT name, subject, body FROM Messages m INNER JOIN Profiles p ON p.id = m.author_id WHERE m.id = ?", [msg_viewnum])
         if res is not None:
-            name, subject, body, sent_to_all = res.fetchone()
+            name, subject, body = res.fetchone()
             print(f"From: {name}")
             print(f"Subject: {subject}")
             print(f"{body}\n\n")
 
-            if not sent_to_all:
-                cur.execute("UPDATE Profile_Message_Link SET already_viewed = TRUE WHERE profile_id = ? AND message_id = ?", [self.profile, msg_viewnum])
-                self.conn.commit()
+            cur.execute("UPDATE Profile_Message_Link SET already_viewed = TRUE WHERE profile_id = ? AND message_id = ?", [self.profile, msg_viewnum])
+            self.conn.commit()
         else:
             print("No message with that ID found")
         return True
@@ -304,10 +302,6 @@ class CLIController:
                 ORDER BY m.published_date DESC
             """, [show_already_viewed, self.profile])
         tab = res.fetchall()
-
-        #if we wanted to get rid of this two-query step, we would need to remove available_to_everyone and make insertion use a cross apply/cross join
-        res = cur.execute("SELECT m.id, p.name, subject, published_date FROM Messages m LEFT JOIN Profiles p ON m.author_id = p.id WHERE m.available_to_everyone IS TRUE")
-        tab += res.fetchall()
 
         self.print_table(tab)
 
@@ -342,8 +336,8 @@ class CLIController:
 
         
         
-        cur.execute("INSERT INTO Messages (author_id, subject, body, published_date, available_to_everyone) VALUES (?, ?, ?, ?, ?);",
-                    [self.profile, subj, body, datetime.now().isoformat(), send_to_all])
+        cur.execute("INSERT INTO Messages (author_id, subject, body, published_date) VALUES (?, ?, ?, ?);",
+                    [self.profile, subj, body, datetime.now().isoformat()])
         
         if not send_to_all:
             res = cur.execute("SELECT max(id) FROM Messages;")
