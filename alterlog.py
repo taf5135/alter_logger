@@ -257,6 +257,7 @@ class CLIController:
                     given_hash = get_hash(password, stored_salt)
                     if given_hash == stored_hash:
                         self.profile = profile_id
+                        print(f"Welcome, {profile_name}!")
                     else:
                         print("Password does not match stored password")
 
